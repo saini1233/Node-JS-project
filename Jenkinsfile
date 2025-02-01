@@ -7,27 +7,25 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/saini1233/Node-JS-project.git'
             }
         }
-        stage('Initialize Node.js Project') {
+        stage('Check for Changes') {
             steps {
-                dir('multi-container-app/backend') {
-                    sh 'npm init -y' // Generates package.json
-                    sh 'npm install express mongoose' // Installs required packages
-                }
-            }
-        }
-        stage('List Directory Contents') {
-            steps {
-                dir('multi-container-app') {
-                    sh 'ls -la' // List all files to verify presence of docker-compose.yml
+                script {
+                    // Check if package.json has changed
+                    def changedFiles = sh(script: 'git diff --name-only HEAD^ HEAD', returnStdout: true).trim()
+                    if (changedFiles.contains('package.json')) {
+                        sh 'npm install' // Only run if package.json has changed
+                    } else {
+                        echo 'No changes in package.json, skipping npm install.'
+                    }
                 }
             }
         }
         stage('Build Docker Compose File') {
             steps {
                 dir('multi-container-app') {
-                    sh 'docker-compose up --build -d' // Build and run in detached mode
-                    sh 'sleep 10' // Wait for the services to start
-                    sh 'curl localhost:3000' // Test the application endpoint
+                    sh 'docker-compose up --build -d'
+                    sh 'sleep 10'
+                    sh 'curl localhost:3000'
                 }
             }
         }
